@@ -3,8 +3,7 @@
 import numpy as np
 from typing import Optional, Callable
 from agents.common import PlayerAction, BoardPiece, SavedState, GenMove
-
-
+import timeit
 
 
 def user_move(board: np.ndarray, _player: BoardPiece, saved_state: Optional[SavedState]):
@@ -69,5 +68,7 @@ def human_vs_agent(
                     playing = False
                     break
 
+
 if __name__ == "__main__":
     human_vs_agent(user_move)
+

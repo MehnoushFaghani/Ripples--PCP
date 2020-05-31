@@ -2,6 +2,15 @@ from enum import Enum
 from typing import Optional
 from typing import Callable, Tuple
 import numpy as np
+from scipy.signal.sigtools import _convolve2d
+from numba import njit
+import random as rnd
+
+
+disable_jit = True
+if disable_jit:
+    import os
+    os.environ['NUMBA_DISABLE_JIT'] = '1'
 
 
 BoardPiece = np.int8  # The data type (dtype) of the board
@@ -11,14 +20,13 @@ PLAYER2 = BoardPiece(2)  # board[i, j] == PLAYER2 where player 2 has a piece
 PlayerAction = np.int8  # The column to be played
 HEIGHT = 6
 WIDTH = 7
-
+CONNECT_N = 4
 
 
 class GameState(Enum):
     IS_WIN = 1
     IS_DRAW = -1
     STILL_PLAYING = 0
-
 
 
 def initialize_game_state() -> np.ndarray:
@@ -28,6 +36,7 @@ def initialize_game_state() -> np.ndarray:
     legal_players = ["X", "O"]
     board = [[] for x in range(WIDTH)]
     return np.full((HEIGHT, WIDTH), NO_PLAYER)
+
 
 def pretty_print_board(board: np.ndarray) -> str:
     """
@@ -45,23 +54,21 @@ def pretty_print_board(board: np.ndarray) -> str:
     |0 1 2 3 4 5 6 |
     """
 
-
     new_board = "|==============|\n"
 
     for row in board:
-        new_board = "|"
+        new_board += "|"
         for position in row:
             if position == NO_PLAYER:
                 new_board += "  "
-            if position == PLAYER1:
+            elif position == PLAYER1:
                 new_board += "X"
-            if position == PLAYER2:
+            elif position == PLAYER2:
                 new_board += "O "
         new_board += "|\n"
     new_board += "|==============|\n"
     new_board += "|0 1 2 3 4 5 6 |\n"
     return new_board
-
 
 
 def string_to_board(pp_board: str) -> np.ndarray:
@@ -84,6 +91,7 @@ def string_to_board(pp_board: str) -> np.ndarray:
         game_state[ind] = build_row
     return game_state
 
+
 def apply_player_action(
     board: np.ndarray, action: PlayerAction, player: BoardPiece, copy: bool = False
 ) -> np.ndarray:
@@ -92,84 +100,31 @@ def apply_player_action(
     board is returned. If copy is True, makes a copy of the board before modifying it.
     """
     new_board = board.copy() if copy else board
-    next_row = np.count_nonzero(new_board, axis=0)[action] - 1
-    new_board[next_row][action] = player
+    next_row = np.argwhere(new_board[:, action] == NO_PLAYER)[0]
+    new_board[next_row, action] = player
     return new_board
 
+
+col_kernel = np.ones((CONNECT_N, 1), dtype=BoardPiece)
+row_kernel = np.ones((1, CONNECT_N), dtype=BoardPiece)
+dia_l_kernel = np.diag(np.ones(CONNECT_N, dtype=BoardPiece))
+dia_r_kernel = np.array(np.diag(np.ones(CONNECT_N, dtype=BoardPiece))[::-1, :])
+
+
 def connected_four(
-    board: np.ndarray, player: BoardPiece, last_action: Optional[PlayerAction] = None,
+    board: np.ndarray, player: BoardPiece, _last_action: Optional[PlayerAction] = None
 ) -> bool:
-    """
-    Returns True if there are four adjacent pieces equal to `player` arranged
-    in either a horizontal, vertical, or diagonal line. Returns False otherwise.
-    If desired, the last action taken (i.e. last column played) can be provided
-    for potential speed optimisation.
-    """
-    bools = board == player
+    board = board.copy()
 
-    def verticalSeq(row, col):
-        """Return True if it found a vertical sequence with the required length
-        """
-        count = 0
-        for rowIndex in range(row, HEIGHT):
-            if board[rowIndex][col] == board[row][col]:
-                count += 1
-            else:
-                break
-        if count >= WIDTH:
-            return True
-        else:
-            return False
+    other_player = BoardPiece(player % 2 + 1)
+    board[board == other_player] = NO_PLAYER
+    board[board == player] = BoardPiece(1)
 
-    def horizontalSeq(row, col):
-        """Return True if it found a horizontal sequence with the required length
-        """
-        count = 0
-        for colIndex in range(col, WIDTH):
-            if board[row][colIndex] == board[row][col]:
-                count += 1
-            else:
-                break
-        if count >= WIDTH:
+    for kernel in (col_kernel, row_kernel, dia_l_kernel, dia_r_kernel):
+        result = _convolve2d(board, kernel, 1, 0, 0, BoardPiece(0))
+        if np.any(result == CONNECT_N):
             return True
-        else:
-            return False
-
-    def negDiagonalSeq(row, col):
-        """Return Ture if it found a negative diagonal sequence with the required length
-        """
-        count = 0
-        colIndex = col
-        for rowIndex in range(row, -1, -1):
-            if colIndex > HEIGHT:
-                break
-            elif board[rowIndex][colIndex] == board[row][col]:
-                count += 1
-            else:
-                break
-            colIndex += 1 # increment column when row is incremented
-        if count >= WIDTH:
-            return True
-        else:
-            return False
-
-    def posDiagonalSeq(row, col):
-        """Return True if it found a positive diagonal sequence with the required length
-        """
-        count = 0
-        colIndex = col
-        for rowIndex in range(row, HEIGHT):
-            if colIndex > HEIGHT:
-                break
-            elif board[rowIndex][colIndex] == board[row][col]:
-                count += 1
-            else:
-                break
-            colIndex += 1  # increment column when row incremented
-        if count >= WIDTH:
-            return True
-        else:
-            return False
+    return False
 
 
 def check_end_state(
