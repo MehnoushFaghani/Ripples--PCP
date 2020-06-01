@@ -2,6 +2,8 @@
 
 import numpy as np
 from typing import Optional, Callable
+
+from agents.agent_minimax.minimax import generate_move_minimax
 from agents.common import PlayerAction, BoardPiece, SavedState, GenMove
 import timeit
 from agents.agent_random.random import generate_move_random
@@ -69,7 +71,7 @@ def human_vs_agent(
                     playing = False
                     break
 
-
 if __name__ == "__main__":
-    human_vs_agent(generate_move_random)
-
+    # human_vs_agent(user_move)
+    # human_vs_agent(generate_move_random)
+    human_vs_agent(generate_move_minimax)

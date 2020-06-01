@@ -109,10 +109,19 @@ def apply_player_action(
     Sets board[i, action] = player, where i is the lowest open row. The modified
     board is returned. If copy is True, makes a copy of the board before modifying it.
     """
-    new_board = board.copy() if copy else board
-    next_row = np.argwhere(new_board[:, action] == NO_PLAYER)[0]
-    new_board[next_row, action] = player
-    return new_board
+
+    if copy:
+        board_copy = np.copy(board)
+
+    for row in range(HEIGHT):
+        if board[row, action] == NO_PLAYER:
+            board[row, action] = player
+            break
+
+    if copy:
+        return board_copy, board
+    else:
+        return board
 
 
 col_kernel = np.ones((CONNECT_N, 1), dtype=BoardPiece)
