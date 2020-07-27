@@ -4,7 +4,7 @@ from typing import Callable, Tuple
 import numpy as np
 from scipy.signal.sigtools import _convolve2d
 from numba import njit
-import random as rnd
+
 
 
 disable_jit = True
@@ -102,26 +102,40 @@ def string_to_board(pp_board: str) -> np.ndarray:
     return game_state
 
 
-def apply_player_action(
-    board: np.ndarray, action: PlayerAction, player: BoardPiece, copy: bool = False
-) -> np.ndarray:
+def check_valid_action(board: np.ndarray, action: np.int8) -> bool:
+
+    return board[5, action] == NO_PLAYER
+
+
+def apply_player_action(board: np.ndarray, action: np.int8,
+                        player: BoardPiece, copy=False) -> tuple:
     """
-    Sets board[i, action] = player, where i is the lowest open row. The modified
-    board is returned. If copy is True, makes a copy of the board before modifying it.
+    Applies player action on the board
+
+    :parameter board: the playing board of type np.ndarray
+    :parameter action: the column number where the next piece is to be placed.
+    :parameter player: the player making the move
+    :parameter copy: Optional parameter stating \
+    if we want to make a copy of the board. This is used during \
+    the minimax algorithm to predict the future moves
+
+    :return: a boolean flag stating True if valid otherwise False
     """
+    # Check if we can place it in that column
+    if check_valid_action(board, action):
+        if copy:
+            copied_board = np.copy(board)
+        else:
+            copied_board = board
 
-    if copy:
-        board_copy = np.copy(board)
-
-    for row in range(HEIGHT):
-        if board[row, action] == NO_PLAYER:
-            board[row, action] = player
-            break
-
-    if copy:
-        return board_copy, board
+        for row in range(HEIGHT):
+            if copied_board[row, action] == NO_PLAYER:
+                copied_board[row, action] = player
+                break
     else:
-        return board
+        raise Exception('Cannot place player in that particular position')
+
+    return copied_board, board
 
 
 col_kernel = np.ones((CONNECT_N, 1), dtype=BoardPiece)
@@ -160,3 +174,14 @@ def check_end_state(
         return GameState.IS_DRAW
     else:
         return GameState.STILL_PLAYING
+
+
+def find_columns(board: np.ndarray) -> list:
+    """
+    returns a list of column index numbers.
+    """
+    col_list = []
+    for col in range(WIDTH):
+        if board[5, col] == NO_PLAYER:
+            col_list.append(col)
+    return col_list

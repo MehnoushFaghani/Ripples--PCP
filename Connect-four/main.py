@@ -2,11 +2,11 @@
 
 import numpy as np
 from typing import Optional, Callable
-
-from agents.agent_minimax.minimax import generate_move_minimax
 from agents.common import PlayerAction, BoardPiece, SavedState, GenMove
 import timeit
-from agents.agent_random.random import generate_move_random
+# from agents.agent_minimax.minimax import generate_move_minimax
+# from agents.agent_random.random import generate_move_random
+from agents.agent_MCTS.MCTS import generate_move_MCTS
 
 
 def user_move(board: np.ndarray, _player: BoardPiece, saved_state: Optional[SavedState]):
@@ -20,14 +20,14 @@ def user_move(board: np.ndarray, _player: BoardPiece, saved_state: Optional[Save
 
 
 def human_vs_agent(
-    generate_move_1: GenMove,
-    generate_move_2: GenMove = user_move,
-    player_1: str = "Player 1",
-    player_2: str = "Player 2",
-    args_1: tuple = (),
-    args_2: tuple = (),
-    init_1: Callable = lambda board, player: None,
-    init_2: Callable = lambda board, player: None,
+        generate_move_1: GenMove,
+        generate_move_2: GenMove = user_move,
+        player_1: str = "Player 1",
+        player_2: str = "Player 2",
+        args_1: tuple = (),
+        args_2: tuple = (),
+        init_1: Callable = lambda board, player: None,
+        init_2: Callable = lambda board, player: None,
 ):
     import time
     from agents.common import PLAYER1, PLAYER2, GameState
@@ -47,7 +47,7 @@ def human_vs_agent(
         playing = True
         while playing:
             for player, player_name, gen_move, args in zip(
-                players, player_names, gen_moves, gen_args,
+                    players, player_names, gen_moves, gen_args,
             ):
                 t0 = time.time()
                 print(pretty_print_board(board))
@@ -58,7 +58,8 @@ def human_vs_agent(
                     board.copy(), player, saved_state[player], *args
                 )
                 print(f"Move time: {time.time() - t0:.3f}s")
-                apply_player_action(board, action, player)
+                board, r_board = apply_player_action(board, action,
+                                                     player, True)
                 end_state = check_end_state(board, player)
                 if end_state != GameState.STILL_PLAYING:
                     print(pretty_print_board(board))
@@ -71,7 +72,9 @@ def human_vs_agent(
                     playing = False
                     break
 
+
 if __name__ == "__main__":
     # human_vs_agent(user_move)
     # human_vs_agent(generate_move_random)
-    human_vs_agent(generate_move_minimax)
+    # human_vs_agent(generate_move_minimax)
+    human_vs_agent(generate_move_MCTS)

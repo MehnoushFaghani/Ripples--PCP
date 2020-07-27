@@ -13,24 +13,24 @@ def generate_move_minimax(
     depth = 4
 
     # Choose a valid, non-full column that maximizes score and return it as `action`
-    PlayerAction = minimax(board, depth, alpha, beta, player, True)[0]
+    action = minimax(board, depth, alpha, beta, player, True)[0]
 
-    return PlayerAction, saved_state
+    return PlayerAction(action), saved_state
 
 
 def find_moves(board: np.ndarray) -> list:
-    '''
+    """
     Find the all empty columns which equal to NO_PLAYER
     gets board as an input
-    '''
+    """
     return np.argwhere(board[board.shape[0] - 1, :] == NO_PLAYER).flatten()
 
 
 def Score_func(score_four: list, player: BoardPiece) -> int:
-    '''
+    """
     computing scores depend on different move
     :return: computed score
-    '''
+    """
 
     score = 0
 
