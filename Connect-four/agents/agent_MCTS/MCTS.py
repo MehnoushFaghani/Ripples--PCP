@@ -6,7 +6,7 @@ from agents.common import connected_four, check_end_state, apply_player_action, 
 
 PLAYER = NO_PLAYER
 OPPONENT = NO_PLAYER
-GLOBAL_TIME = 20
+Timeout = 20
 
 
 # Nodes of MCTS
@@ -92,10 +92,10 @@ def generate_move_MCTS(board: np.ndarray, player: BoardPiece,
 def MCTS(board: np.ndarray) -> PlayerAction:
 
     rootNode = Node(state=board, player=PLAYER)
-
-    global GLOBAL_TIME
-    end = time.time() + GLOBAL_TIME
-    while time.time() < end:
+    itermax = 100000
+    start = time.time()
+    global Timeout
+    for i in range(itermax):
 
         node = rootNode
 
@@ -142,6 +142,10 @@ def MCTS(board: np.ndarray) -> PlayerAction:
         while node is not None:
             node.update(result)
             node = node.parent
+
+        duration = time.time() - start
+        if duration > Timeout:
+            break
 
     bestScore = -10000000.0
     selectedColumn = - 1
